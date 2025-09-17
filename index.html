@@ -11,6 +11,13 @@
   <style>
     body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
+    /* NEW: переносим очень длинные токены внутри карточек,
+       чтобы не вылезали за блок и не «наезжали» на правую колонку */
+    .dns-result{
+      word-break: break-word;      /* перенос по словам */
+      overflow-wrap: anywhere;     /* если нет пробелов — ломаем где угодно */
+      white-space: pre-wrap;       /* сохраняем пробелы/переводы строк, но можно переносить */
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
@@ -95,22 +102,23 @@
     function card(title, innerHTML) {
       const wrapper = document.createElement('div');
       wrapper.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
-      wrapper.innerHTML = `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div><div class="text-sm text-slate-300 mono space-y-1">${innerHTML}</div>`;
+      /* NEW: dns-result добавлен для переноса длинных строк */
+      wrapper.innerHTML =
+        `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
+        `<div class="text-sm text-slate-300 mono space-y-1 dns-result">${innerHTML}</div>`;
       return wrapper;
     }
 
-    // Google DoH с fallback на Cloudflare DoH (оба по CORS)
+    // Google DoH с fallback на Cloudflare DoH
     async function fetchDoH(domain, type) {
       const gUrl = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
       const cfUrl = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
-      // Сначала Google
       try {
         const r = await fetch(gUrl, { mode: 'cors', headers: { 'accept': 'application/dns-json' } });
         if (!r.ok) throw new Error(`Google HTTP ${r.status}`);
         return await r.json();
       } catch (e) {
         console.warn('Google DoH failed:', e);
-        // Затем Cloudflare
         const r2 = await fetch(cfUrl, { mode: 'cors', headers: { 'accept': 'application/dns-json' } });
         if (!r2.ok) throw new Error(`Cloudflare HTTP ${r2.status}`);
         return await r2.json();
@@ -140,21 +148,19 @@
         resultsEl.appendChild(holder);
         try {
           const json = await fetchDoH(domain, t);
-          holder.querySelector('.mono').innerHTML = renderAnswers(t, json);
+          holder.querySelector('.dns-result').innerHTML = renderAnswers(t, json); /* NEW: target dns-result */
         } catch (e) {
           console.error('DoH error:', e);
-          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
+          holder.querySelector('.dns-result').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
         }
       }
 
       if (btn) { btn.disabled = false; btn.textContent = 'Проверить'; }
     }
 
-    // Навешиваем события (проверяем, что элементы нашлись)
     if (btn) btn.addEventListener('click', check);
     if (domainInput) domainInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') check(); });
 
-    // Демо и автозапуск
     if (domainInput && !domainInput.value) domainInput.value = 'example.com';
     setTimeout(() => { check().catch(console.error); }, 200);
   });
