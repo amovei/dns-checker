@@ -47,10 +47,8 @@
           <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
           <p class="text-slate-300 mb-4">
             Разворачиваем n8n под домен с HTTPS за пару минут (1-click installer). Настройка VPS, Traefik, мониторинг.
-            Пишите:
-            <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>
-            или Telegram:
-            <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
+            Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>
+            или Telegram: <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
           </p>
           <ul class="list-disc pl-5 space-y-1 text-slate-300">
             <li>Автоматические SSL-сертификаты (Let’s Encrypt)</li>
@@ -63,8 +61,7 @@
         <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
           <h3 class="text-xl font-bold mb-3">🔥 Подключайся!</h3>
           <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block">
-            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot"
-                 class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
+            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
           </a>
         </div>
       </div>
@@ -73,27 +70,40 @@
 
   <script>
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('DNS Checker ready');
-
-    const types = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
-    const resultsEl = document.getElementById('results');
-    const btn = document.getElementById('checkBtn');
-    const domainInput = document.getElementById('domain');
+    const types   = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
+    const results = document.getElementById('results');
+    const btn     = document.getElementById('checkBtn');
+    const input   = document.getElementById('domain');
 
     function card(title, innerHTML) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
-      wrapper.innerHTML =
+      const el = document.createElement('div');
+      el.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
+      el.innerHTML =
         `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
         `<div class="text-sm text-slate-300 mono space-y-1">${innerHTML}</div>`;
-      return wrapper;
+      return el;
     }
 
+    // Запрос к провайдерам DoH (Google → Cloudflare)
     async function fetchDoH(domain, type) {
-      const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
-      const r = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
-      if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
-      return r.json();
+      const endpoints = [
+        `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`,
+        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`
+      ];
+      let lastErr;
+      for (const url of endpoints) {
+        try {
+          const r = await fetch(url, {
+            mode: 'cors',
+            headers: { 'accept': 'application/dns-json' }
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return await r.json();
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr || new Error('Нет ответа от DoH');
     }
 
     function renderAnswers(json) {
@@ -101,26 +111,26 @@
       return json.Answer.map(a => {
         const name = (a.name || '').replace(/\.$/, '');
         const data = a.data || '';
-        const ttl = a.TTL ?? '';
+        const ttl  = a.TTL ?? '';
         return `<div><span class="text-white">${name}</span> → <span>${data}</span> <span class="text-slate-500">(TTL ${ttl})</span></div>`;
       }).join('');
     }
 
     async function check() {
-      const domain = (domainInput.value || '').trim();
-      if (!domain) { domainInput.focus(); return; }
+      const domain = (input.value || '').trim();
+      if (!domain) { input.focus(); return; }
 
-      resultsEl.innerHTML = '';
+      results.innerHTML = '';
       btn.disabled = true; btn.textContent = 'Проверяю…';
 
       for (const t of types) {
-        const holder = card(t, '<span class="text-slate-500">запрос…</span>');
-        resultsEl.appendChild(holder);
+        const box = card(t, '<span class="text-slate-500">запрос…</span>');
+        results.appendChild(box);
         try {
           const json = await fetchDoH(domain, t);
-          holder.querySelector('.mono').innerHTML = renderAnswers(json);
+          box.querySelector('.mono').innerHTML = renderAnswers(json);
         } catch (e) {
-          holder.querySelector('.mono').innerHTML = `<span class="text-rose-400">ошибка: ${e.message}</span>`;
+          box.querySelector('.mono').innerHTML = `<span class="text-rose-400">ошибка: ${e.message}</span>`;
         }
       }
 
@@ -128,9 +138,10 @@
     }
 
     btn.addEventListener('click', check);
-    domainInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
 
-    domainInput.value = 'example.com';
+    // демо
+    input.value = 'example.com';
     setTimeout(check, 200);
   });
   </script>
