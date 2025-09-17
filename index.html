@@ -1,232 +1,102 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-# ================== SETTINGS (можно править перед запуском) ==================
-USE_TRAEFIK=${USE_TRAEFIK:-1}          # 1 = с Traefik и HTTPS, 0 = без реверс-прокси
-N8N_DOMAIN=${N8N_DOMAIN:-"n8n.example.com"}     # Домен для n8n (когда USE_TRAEFIK=1)
-LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-"admin@example.com"}  # Почта для Let's Encrypt
-N8N_VERSION=${N8N_VERSION:-"latest"}   # Версия образа n8n
-POSTGRES_VERSION=${POSTGRES_VERSION:-"16"}
-N8N_DATA_DIR=${N8N_DATA_DIR:-"/var/lib/n8n"}
-# ============================================================================
-
-log() { echo -e "\033[1;32m[+] $*\033[0m"; }
-err() { echo -e "\033[1;31m[!] $*\033[0m" >&2; }
-
-require_root() {
-  if [[ $EUID -ne 0 ]]; then err "Запусти скрипт с sudo/от root"; exit 1; fi
+body {
+  font-family: Arial, sans-serif;
+  background: #0d1224;
+  color: white;
+  margin: 0;
+  padding: 0;
 }
 
-check_ubuntu() {
-  . /etc/os-release
-  if [[ "${ID}" != "ubuntu" ]]; then err "Только Ubuntu поддерживается"; exit 1; fi
-  if [[ "${VERSION_ID}" != "22.04" && "${VERSION_ID}" != "24.04" ]]; then
-    err "Рекомендованы Ubuntu 22.04 или 24.04 (найдено ${VERSION_ID})"
-  fi
+header {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.5em;
+  font-weight: bold;
 }
 
-install_docker() {
-  if ! command -v docker >/dev/null 2>&1; then
-    log "Устанавливаю Docker..."
-    apt-get update -y
-    apt-get install -y ca-certificates curl gnupg lsb-release
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
-      > /etc/apt/sources.list.d/docker.list
-    apt-get update -y
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    systemctl enable --now docker
-  else
-    log "Docker уже установлен"
-  fi
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
 }
 
-create_user_and_dirs() {
-  log "Создаю системного пользователя n8n и директории..."
-  id -u n8n >/dev/null 2>&1 || useradd --system --home "${N8N_DATA_DIR}" --shell /usr/sbin/nologin n8n
-  mkdir -p "${N8N_DATA_DIR}"/{data,postgres,traefik}
-  chown -R n8n:n8n "${N8N_DATA_DIR}"
+.card {
+  background: #1c2340;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  width: 350px;
 }
 
-gen_secret() {
-  openssl rand -base64 48 | tr -d '\n'
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-write_env() {
-  log "Генерирую .env..."
-  local key
-  key=$(gen_secret)
-  cat > "${N8N_DATA_DIR}/.env" <<EOF
-# n8n
-N8N_BASIC_AUTH_ACTIVE=false
-N8N_PORT=5678
-N8N_ENCRYPTION_KEY=${key}
-# база
-POSTGRES_USER=n8n
-POSTGRES_PASSWORD=$(gen_secret | tr -d '=+/')
-POSTGRES_DB=n8n
-# домен/база_url
-EOF
-
-  if [[ "${USE_TRAEFIK}" -eq 1 ]]; then
-    echo "N8N_HOST=${N8N_DOMAIN}" >> "${N8N_DATA_DIR}/.env"
-    echo "WEBHOOK_URL=https://${N8N_DOMAIN}" >> "${N8N_DATA_DIR}/.env"
-  else
-    echo "N8N_HOST=localhost" >> "${N8N_DATA_DIR}/.env"
-    echo "WEBHOOK_URL=http://localhost:5678" >> "${N8N_DATA_DIR}/.env"
-  fi
-  chown n8n:n8n "${N8N_DATA_DIR}/.env"
+.input-group input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
 }
 
-write_compose_no_proxy() {
-  cat > "${N8N_DATA_DIR}/docker-compose.yml" <<'YML'
-name: n8n
-services:
-  db:
-    image: postgres:${POSTGRES_VERSION}
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - ./postgres:/var/lib/postgresql/data
-  n8n:
-    image: n8nio/n8n:${N8N_VERSION}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=db
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - N8N_EDITOR_BASE_URL=${WEBHOOK_URL}
-      - N8N_DIAGNOSTICS_ENABLED=false
-    ports:
-      - "5678:5678"
-    volumes:
-      - ./data:/home/node/.n8n
-    depends_on:
-      - db
-YML
+.input-group button {
+  background: #9b59b6;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
 }
 
-write_compose_with_traefik() {
-  cat > "${N8N_DATA_DIR}/docker-compose.yml" <<'YML'
-name: n8n
-services:
-  traefik:
-    image: traefik:latest
-    restart: unless-stopped
-    command:
-      - "--providers.docker=true"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.le.acme.httpchallenge=true"
-      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=websecure"
-      - "--certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL}"
-      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
-      - "--serversTransport.insecureSkipVerify=true"
-    ports:
-      - "443:443"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./traefik:/letsencrypt"
-    labels:
-      - "traefik.enable=true"
-
-  db:
-    image: postgres:${POSTGRES_VERSION}
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    volumes:
-      - ./postgres:/var/lib/postgresql/data
-
-  n8n:
-    image: n8nio/n8n:${N8N_VERSION}
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=db
-      - DB_POSTGRESDB_PORT=5432
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - N8N_EDITOR_BASE_URL=https://${N8N_HOST}
-      - WEBHOOK_URL=https://${N8N_HOST}
-      - N8N_DIAGNOSTICS_ENABLED=false
-    volumes:
-      - ./data:/home/node/.n8n
-    depends_on:
-      - db
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`${N8N_HOST}`)"
-      - "traefik.http.routers.n8n.entrypoints=websecure"
-      - "traefik.http.routers.n8n.tls.certresolver=le"
-YML
+.input-group button:hover {
+  background: #8e44ad;
 }
 
-write_systemd() {
-  log "Создаю systemd unit..."
-  cat > /etc/systemd/system/n8n-compose.service <<EOF
-[Unit]
-Description=n8n via Docker Compose
-Requires=docker.service
-After=docker.service
-
-[Service]
-WorkingDirectory=${N8N_DATA_DIR}
-Environment="COMPOSE_PROJECT_NAME=n8n"
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
-TimeoutStartSec=0
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF
-  systemctl daemon-reload
-  systemctl enable n8n-compose.service
+.results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
-print_summary() {
-  echo
-  log "Готово!"
-  if [[ "${USE_TRAEFIK}" -eq 1 ]]; then
-    echo "Открой: https://${N8N_DOMAIN}"
-  else
-    echo "Открой: http://<IP-сервера>:5678"
-  fi
-  echo "Директория: ${N8N_DATA_DIR}"
-  echo "Старт/стоп:  sudo systemctl start|stop n8n-compose"
+.result-card {
+  background: #2a3053;
+  padding: 10px;
+  border-radius: 8px;
+  min-height: 50px;
 }
 
-main() {
-  require_root
-  check_ubuntu
-  install_docker
-  create_user_and_dirs
-  write_env
-  if [[ "${USE_TRAEFIK}" -eq 1 ]]; then
-    write_compose_with_traefik
-  else
-    write_compose_no_proxy
-  fi
-  chown -R n8n:n8n "${N8N_DATA_DIR}"
-  write_systemd
-  log "Запускаю сервис..."
-  systemctl start n8n-compose
-  print_summary
+/* --- Гифка --- */
+.promo-gif {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 15px;
 }
 
-main "$@"
+/* --- Кнопка --- */
+.btn-telegram {
+  display: inline-block;
+  background: linear-gradient(90deg, #6C63FF, #8A2BE2);
+  color: white;
+  text-decoration: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn-telegram:hover {
+  background: linear-gradient(90deg, #8A2BE2, #6C63FF);
+  transform: scale(1.05);
+}
+
+footer {
+  text-align: center;
+  padding: 15px;
+  margin-top: 30px;
+  font-size: 0.9em;
+  color: #aaa;
+}
