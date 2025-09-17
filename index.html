@@ -27,10 +27,9 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-4 py-8">
-    <!-- три колонки начиная с md -->
-    <section class="grid md:grid-cols-3 gap-6 items-start">
-      <!-- левая панель на 2 колонки -->
-      <div class="md:col-span-2 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
+    <section class="grid lg:grid-cols-3 gap-6 items-start">
+      <!-- Левая часть -->
+      <div class="lg:col-span-2 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
         <h2 class="text-2xl font-bold mb-4">Проверка DNS-записей</h2>
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
           <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com" />
@@ -41,14 +40,17 @@
         <div class="grid md:grid-cols-2 gap-4" id="results"></div>
       </div>
 
-      <!-- ПРАВАЯ КОЛОНКА-ОБЁРТКА: один ребёнок сетки, внутри aside + gif вертикально -->
+      <!-- Правая колонка -->
       <div class="flex flex-col gap-6">
+        <!-- Блок помощи -->
         <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
           <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
           <p class="text-slate-300 mb-4">
             Разворачиваем n8n под домен с HTTPS за пару минут (1-click installer). Настройка VPS, Traefik, мониторинг.
-            Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>
-            или Telegram: <span class="mono">@gia_sah</span>.
+            Пишите: 
+            <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a> 
+            или Telegram: 
+            <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
           </p>
           <ul class="list-disc pl-5 space-y-1 text-slate-300">
             <li>Автоматические SSL-сертификаты (Let’s Encrypt)</li>
@@ -57,10 +59,12 @@
           </ul>
         </aside>
 
+        <!-- Промо-графика -->
         <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
           <h3 class="text-xl font-bold mb-3">🔥 Подключайся!</h3>
-          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener">
-            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
+          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block">
+            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot"
+                 class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
           </a>
         </div>
       </div>
@@ -68,12 +72,9 @@
 
     <section class="mt-10 p-6 rounded-2xl bg-slate-900/60 border border-slate-800">
       <h4 class="text-lg font-semibold mb-2">Как это работает?</h4>
-      <p class="text-slate-300">
-        Фронтенд запрашивает DNS-записи через DNS-over-HTTPS:
+      <p class="text-slate-300">Фронтенд запрашивает DNS-записи через DNS-over-HTTPS:
         <span class="mono">https://dns.google/resolve?name=&lt;домен&gt;&amp;type=A</span> или
-        <span class="mono">https://cloudflare-dns.com/dns-query?name=&lt;домен&gt;&amp;type=A</span>
-        (формат <span class="mono">application/dns-json</span>).
-      </p>
+        <span class="mono">https://cloudflare-dns.com/dns-query?name=&lt;домен&gt;&amp;type=A</span> (формат <span class="mono">application/dns-json</span>).</p>
     </section>
   </main>
 
@@ -110,7 +111,7 @@
         const name = a.name?.replace(/\.$/, '') || '';
         const data = a.data || '';
         const ttl = a.TTL;
-        return `<div><span class='text-white'>\${name}</span> → <span>\${data}</span> <span class='text-slate-500'>(TTL \${ttl})</span></div>`;
+        return `<div><span class='text-white'>${name}</span> → <span>${data}</span> <span class='text-slate-500'>(TTL ${ttl})</span></div>`;
       }).join('');
     }
 
@@ -127,7 +128,7 @@
           const json = await fetchDoH(domain, t);
           holder.querySelector('.mono').innerHTML = renderAnswers(t, json);
         } catch (e) {
-          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: \${e.message}</span>`;
+          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
         }
       }
 
