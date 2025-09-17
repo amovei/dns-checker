@@ -1,127 +1,155 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DNS Checker — быстрые DNS‑проверки</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS Checker</title>
   <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #0f172a;
+      color: #e2e8f0;
+    }
+    header {
+      padding: 1rem;
+      text-align: center;
+      background: #1e293b;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .card h3 {
+      margin-top: 0;
+      color: #fff;
+    }
+    input[type="text"] {
+      width: 70%;
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: none;
+      margin-right: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 5px;
+      background: #8b5cf6;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #7c3aed;
+    }
+    .results {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .result-box {
+      background: #0f172a;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      min-height: 80px;
+    }
+    .ad-block {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .ad-block img {
+      width: 100%;
+      max-width: 250px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .ad-block img:hover {
+      transform: scale(1.05);
+    }
+    footer {
+      text-align: center;
+      padding: 1rem;
+      margin-top: 2rem;
+      background: #1e293b;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100">
-  <header class="sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70 border-b border-slate-800">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500"></div>
-        <h1 class="text-lg font-semibold tracking-tight">DNS Checker</h1>
-      </div>
-      <nav class="text-sm text-slate-300">
-        <a href="#promo" class="hover:text-white">Услуги</a>
-      </nav>
-    </div>
+<body>
+  <header>
+    DNS Checker
   </header>
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
-    <section class="grid lg:grid-cols-3 gap-6 items-start">
-      <div class="lg:col-span-2 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
-        <h2 class="text-2xl font-bold mb-4">Проверка DNS‑записей</h2>
-        <div class="flex flex-col sm:flex-row gap-3 mb-4">
-          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com" />
-          <button id="checkBtn" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
-        </div>
-        <p class="text-sm text-slate-400 mb-4">Запрос идёт через публичные DNS‑over‑HTTPS API (Google/Cloudflare). Бэкенд не требуется.</p>
+  <div class="container">
+    <!-- Основная часть -->
+    <div class="card">
+      <h3>Проверка DNS-записей</h3>
+      <input type="text" id="domain" placeholder="example.com">
+      <button onclick="checkDNS()">Проверить</button>
 
-        <div class="grid md:grid-cols-2 gap-4" id="results"></div>
+      <div class="results">
+        <div class="result-box" id="a">A</div>
+        <div class="result-box" id="aaaa">AAAA</div>
+        <div class="result-box" id="cname">CNAME</div>
+        <div class="result-box" id="mx">MX</div>
+        <div class="result-box" id="ns">NS</div>
+        <div class="result-box" id="txt">TXT</div>
+        <div class="result-box" id="soa">SOA</div>
       </div>
+    </div>
 
-      <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
-        <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
-        <p class="text-slate-300 mb-4">Разворачиваем n8n под домен с HTTPS за пару минут (1‑click installer). Настройка VPS, Traefik, мониторинг. Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:you@mail.ru">you@mail.ru</a> или Telegram: <span class="mono">@your_handle</span>.</p>
-        <ul class="list-disc pl-5 space-y-1 text-slate-300">
-          <li>Автоматические SSL‑сертификаты (Let’s Encrypt)</li>
-          <li>Миграции/бэкапы PostgreSQL</li>
-          <li>CI/CD для контейнеров</li>
-        </ul>
-      </aside>
-    </section>
+    <!-- Рекламный блок -->
+    <div class="card">
+      <h3>🔥 Подключайся!</h3>
+      <div class="ad-block">
+        <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank">
+          <img src="assets/Anim_v1.gif" alt="Telegram Bot">
+        </a>
+      </div>
+    </div>
+  </div>
 
-    <section class="mt-10 p-6 rounded-2xl bg-slate-900/60 border border-slate-800">
-      <h4 class="text-lg font-semibold mb-2">Как это работает?</h4>
-      <p class="text-slate-300">Фронтенд запрашивает DNS‑записи через DNS‑over‑HTTPS:
-        <span class="mono">https://dns.google/resolve?name=&lt;домен&gt;&amp;type=A</span> или
-        <span class="mono">https://cloudflare-dns.com/dns-query?name=&lt;домен&gt;&amp;type=A</span> (формат <span class="mono">application/dns-json</span>).</p>
-    </section>
-  </main>
-
-  <footer class="max-w-6xl mx-auto px-4 py-10 text-center text-slate-400">
-    Сделано для быстрых проверок DNS • © <span id="year"></span>
+  <footer>
+    Сделано для быстрой проверки DNS • © 2025
   </footer>
 
   <script>
-    const yearEl = document.getElementById('year');
-    yearEl.textContent = new Date().getFullYear();
+    async function checkDNS() {
+      const domain = document.getElementById("domain").value.trim();
+      if (!domain) return alert("Введите домен!");
 
-    const types = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
-    const resultsEl = document.getElementById('results');
-    const btn = document.getElementById('checkBtn');
-    const domainInput = document.getElementById('domain');
-
-    function card(title, innerHTML) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
-      wrapper.innerHTML = `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div><div class="text-sm text-slate-300 mono space-y-1">${innerHTML}</div>`;
-      return wrapper;
-    }
-
-    async function fetchDoH(domain, type) {
-      // Google DoH чаще всего надёжно отдаёт CORS
-      const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
-      const r = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
-    }
-
-    function renderAnswers(type, json) {
-      if (!json || !json.Answer) return `<span class='text-slate-500'>нет записей</span>`;
-      return json.Answer.map(a => {
-        const name = a.name?.replace(/\.$/, '') || '';
-        const data = a.data || '';
-        const ttl = a.TTL;
-        return `<div><span class='text-white'>${name}</span> → <span>${data}</span> <span class='text-slate-500'>(TTL ${ttl})</span></div>`;
-      }).join('');
-    }
-
-    async function check() {
-      const domain = domainInput.value.trim();
-      if (!domain) { domainInput.focus(); return; }
-      resultsEl.innerHTML = '';
-      btn.disabled = true; btn.textContent = 'Проверяю…';
-
-      for (const t of types) {
-        const holder = card(t, '<span class="text-slate-500">запрос…</span>');
-        resultsEl.appendChild(holder);
+      const types = ["A","AAAA","CNAME","MX","NS","TXT","SOA"];
+      for (let type of types) {
+        document.getElementById(type.toLowerCase()).innerText = type + ": проверка...";
         try {
-          const json = await fetchDoH(domain, t);
-          holder.querySelector('.mono').innerHTML = renderAnswers(t, json);
+          const res = await fetch(`https://dns.google/resolve?name=${domain}&type=${type}`);
+          const data = await res.json();
+          if (data.Answer) {
+            document.getElementById(type.toLowerCase()).innerText =
+              type + "\\n" + data.Answer.map(a => a.data).join("\\n");
+          } else {
+            document.getElementById(type.toLowerCase()).innerText = type + "\\nнет записей";
+          }
         } catch (e) {
-          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
+          document.getElementById(type.toLowerCase()).innerText = type + "\\nошибка";
         }
       }
-
-      btn.disabled = false; btn.textContent = 'Проверить';
     }
-
-    btn.addEventListener('click', check);
-    domainInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') check(); });
-    // демо-домен, чтобы было что показать
-    domainInput.value = 'example.com';
-    // автозапуск
-    setTimeout(check, 200);
   </script>
 </body>
 </html>
