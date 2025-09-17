@@ -12,7 +12,7 @@
     body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-      /* главные фиксы переносов длинных токенов */
+      /* фиксы длинных TXT-записей */
       overflow-wrap: anywhere;
       word-break: break-word;
     }
@@ -42,12 +42,12 @@
           <button id="checkBtn" type="button" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
         </div>
 
+        <!-- ВАЖНО: контейнер результатов НЕ удалять -->
         <div class="grid md:grid-cols-2 gap-4" id="results"></div>
       </div>
 
       <!-- Правая колонка -->
       <div class="flex flex-col gap-6">
-        <!-- Блок помощи -->
         <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
           <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
           <p class="text-slate-300 mb-4">
@@ -62,7 +62,6 @@
           </ul>
         </aside>
 
-        <!-- Промо-графика -->
         <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
           <h3 class="text-xl font-bold mb-3">🔥 Подключайся!</h3>
           <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block">
@@ -82,11 +81,9 @@
 
     function card(title, innerHTML) {
       const el = document.createElement('div');
-      // min-w-0 позволит гриду ужимать карточку, а не выдавливать её
       el.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4 min-w-0 max-h-64 overflow-auto';
       el.innerHTML =
         `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
-        // break-words + whitespace-normal дополнительно помогают tailwind-классами
         `<div class="text-sm text-slate-300 mono space-y-1 break-words whitespace-normal">${innerHTML}</div>`;
       return el;
     }
@@ -120,6 +117,9 @@
     async function check() {
       const domain = (input.value || '').trim();
       if (!domain) { input.focus(); return; }
+
+      // защита на случай, если results вдруг убрали
+      if (!results) { alert('Не найден контейнер с id="results"'); return; }
 
       results.innerHTML = '';
       btn.disabled = true; btn.textContent = 'Проверяю…';
