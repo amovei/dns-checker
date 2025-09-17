@@ -9,16 +9,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-      /* фиксы длинных TXT-записей */
-      overflow-wrap: anywhere;
-      word-break: break-word;
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji"}
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      /* фикс вылазящих строк */
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      white-space:normal;
     }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
+  <!-- Хедер -->
   <header class="sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70 border-b border-slate-800">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -31,9 +33,10 @@
     </div>
   </header>
 
+  <!-- Контент -->
   <main class="max-w-6xl mx-auto px-4 py-8">
     <section class="grid lg:grid-cols-3 gap-6 items-start">
-      <!-- Левая часть -->
+      <!-- Левая колонка -->
       <div class="lg:col-span-2 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
         <h2 class="text-2xl font-bold mb-4">Проверка DNS-записей</h2>
 
@@ -42,18 +45,21 @@
           <button id="checkBtn" type="button" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
         </div>
 
-        <!-- ВАЖНО: контейнер результатов НЕ удалять -->
+        <!-- Результаты -->
         <div class="grid md:grid-cols-2 gap-4" id="results"></div>
       </div>
 
       <!-- Правая колонка -->
       <div class="flex flex-col gap-6">
+        <!-- Блок помощи -->
         <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
           <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
           <p class="text-slate-300 mb-4">
             Разворачиваем n8n под домен с HTTPS за пару минут (1-click installer). Настройка VPS, Traefik, мониторинг.
-            Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>
-            или Telegram: <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
+            Пишите:
+            <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>
+            или Telegram:
+            <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
           </p>
           <ul class="list-disc pl-5 space-y-1 text-slate-300">
             <li>Автоматические SSL-сертификаты (Let’s Encrypt)</li>
@@ -62,76 +68,67 @@
           </ul>
         </aside>
 
+        <!-- Промо-графика / GIF -->
         <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
           <h3 class="text-xl font-bold mb-3">🔥 Подключайся!</h3>
           <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block">
-            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
+            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot"
+                 class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
           </a>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Скрипт -->
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const types   = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
-    const results = document.getElementById('results');
-    const btn     = document.getElementById('checkBtn');
-    const input   = document.getElementById('domain');
+    const types = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
+    const resultsEl = document.getElementById('results');
+    const btn = document.getElementById('checkBtn');
+    const domainInput = document.getElementById('domain');
 
     function card(title, innerHTML) {
-      const el = document.createElement('div');
-      el.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4 min-w-0 max-h-64 overflow-auto';
-      el.innerHTML =
-        `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
-        `<div class="text-sm text-slate-300 mono space-y-1 break-words whitespace-normal">${innerHTML}</div>`;
-      return el;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
+      wrapper.innerHTML =
+        `<div class="flex items-center justify-between mb-2">
+           <h3 class="font-semibold">${title}</h3>
+         </div>
+         <div class="text-sm text-slate-300 mono space-y-1">${innerHTML}</div>`;
+      return wrapper;
     }
 
     async function fetchDoH(domain, type) {
-      const endpoints = [
-        `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`,
-        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`
-      ];
-      let lastErr;
-      for (const url of endpoints) {
-        try {
-          const r = await fetch(url, { mode: 'cors', headers: { 'accept': 'application/dns-json' } });
-          if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
-          return await r.json();
-        } catch (e) { lastErr = e; }
-      }
-      throw lastErr || new Error('Нет ответа от DoH');
+      const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
+      const r = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
+      if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
+      return r.json();
     }
 
-    function renderAnswers(json) {
+    function renderAnswers(type, json) {
       if (!json || !json.Answer) return `<span class="text-slate-500">нет записей</span>`;
       return json.Answer.map(a => {
         const name = (a.name || '').replace(/\.$/, '');
         const data = a.data || '';
-        const ttl  = a.TTL ?? '';
+        const ttl = a.TTL ?? '';
         return `<div><span class="text-white">${name}</span> → <span>${data}</span> <span class="text-slate-500">(TTL ${ttl})</span></div>`;
       }).join('');
     }
 
     async function check() {
-      const domain = (input.value || '').trim();
-      if (!domain) { input.focus(); return; }
-
-      // защита на случай, если results вдруг убрали
-      if (!results) { alert('Не найден контейнер с id="results"'); return; }
-
-      results.innerHTML = '';
+      const domain = domainInput.value.trim();
+      if (!domain) { domainInput.focus(); return; }
+      resultsEl.innerHTML = '';
       btn.disabled = true; btn.textContent = 'Проверяю…';
 
       for (const t of types) {
-        const box = card(t, '<span class="text-slate-500">запрос…</span>');
-        results.appendChild(box);
+        const holder = card(t, '<span class="text-slate-500">запрос…</span>');
+        resultsEl.appendChild(holder);
         try {
           const json = await fetchDoH(domain, t);
-          box.querySelector('.mono').innerHTML = renderAnswers(json);
+          holder.querySelector('.mono').innerHTML = renderAnswers(t, json);
         } catch (e) {
-          box.querySelector('.mono').innerHTML = `<span class="text-rose-400">ошибка: ${e.message}</span>`;
+          holder.querySelector('.mono').innerHTML = `<span class="text-rose-400">ошибка: ${e.message}</span>`;
         }
       }
 
@@ -139,11 +136,10 @@
     }
 
     btn.addEventListener('click', check);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+    domainInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') check(); });
 
-    input.value = 'example.com';
-    setTimeout(check, 200);
-  });
+    // Демо-значение
+    domainInput.value = 'example.com';
   </script>
 </body>
 </html>
