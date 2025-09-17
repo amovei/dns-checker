@@ -1,128 +1,232 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DNS Checker — быстрые DNS-проверки</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji"}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-  </style>
-</head>
-<body class="bg-slate-950 text-slate-100">
-  <!-- Header -->
-  <header class="sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70 border-b border-slate-800">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500"></div>
-        <h1 class="text-lg font-semibold tracking-tight">DNS Checker</h1>
-      </div>
-      <nav class="text-sm text-slate-300">
-        <a href="#promo" class="hover:text-white">Услуги</a>
-      </nav>
-    </div>
-  </header>
+#!/usr/bin/env bash
+set -euo pipefail
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
-    <section class="grid lg:grid-cols-3 gap-6 items-start">
-      <!-- Left: Checker -->
-      <div class="lg:col-span-2 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
-        <h2 class="text-2xl font-bold mb-4">Проверка DNS-записей</h2>
-        <div class="flex flex-col sm:flex-row gap-3 mb-4">
-          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com" />
-          <button id="checkBtn" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
-        </div>
-        <p class="text-sm text-slate-400 mb-4">
-          Запрос идёт через публичные DNS-over-HTTPS API (Google/Cloudflare). Бэкенд не требуется.
-        </p>
+# ================== SETTINGS (можно править перед запуском) ==================
+USE_TRAEFIK=${USE_TRAEFIK:-1}          # 1 = с Traefik и HTTPS, 0 = без реверс-прокси
+N8N_DOMAIN=${N8N_DOMAIN:-"n8n.example.com"}     # Домен для n8n (когда USE_TRAEFIK=1)
+LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-"admin@example.com"}  # Почта для Let's Encrypt
+N8N_VERSION=${N8N_VERSION:-"latest"}   # Версия образа n8n
+POSTGRES_VERSION=${POSTGRES_VERSION:-"16"}
+N8N_DATA_DIR=${N8N_DATA_DIR:-"/var/lib/n8n"}
+# ============================================================================
 
-        <div class="grid md:grid-cols-2 gap-4" id="results"></div>
-      </div>
+log() { echo -e "\033[1;32m[+] $*\033[0m"; }
+err() { echo -e "\033[1;31m[!] $*\033[0m" >&2; }
 
-      <!-- Right: Promo -->
-      <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
-        <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
-        <p class="text-slate-300 mb-4">
-          Разворачиваем n8n под домен с HTTPS за пару минут (1-click installer).
-          Настройка VPS, Traefik, мониторинг.
-          Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:you@mail.ru">you@mail.ru</a>
-          или Telegram: <span class="mono">@your_handle</span>.
-        </p>
-        <ul class="list-disc pl-5 space-y-1 text-slate-300">
-          <li>Автоматические SSL-сертификаты (Let’s Encrypt)</li>
-          <li>Миграции/бэкапы PostgreSQL</li>
-          <li>CI/CD для контейнеров</li>
-        </ul>
-      </aside>
-    </section>
-  </main>
+require_root() {
+  if [[ $EUID -ne 0 ]]; then err "Запусти скрипт с sudo/от root"; exit 1; fi
+}
 
-  <footer class="max-w-6xl mx-auto px-4 py-10 text-center text-slate-400">
-    Сделано для быстрых проверок DNS • © <span id="year"></span>
-  </footer>
+check_ubuntu() {
+  . /etc/os-release
+  if [[ "${ID}" != "ubuntu" ]]; then err "Только Ubuntu поддерживается"; exit 1; fi
+  if [[ "${VERSION_ID}" != "22.04" && "${VERSION_ID}" != "24.04" ]]; then
+    err "Рекомендованы Ubuntu 22.04 или 24.04 (найдено ${VERSION_ID})"
+  fi
+}
 
-  <script>
-    const yearEl = document.getElementById('year');
-    yearEl.textContent = new Date().getFullYear();
+install_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    log "Устанавливаю Docker..."
+    apt-get update -y
+    apt-get install -y ca-certificates curl gnupg lsb-release
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+      > /etc/apt/sources.list.d/docker.list
+    apt-get update -y
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    systemctl enable --now docker
+  else
+    log "Docker уже установлен"
+  fi
+}
 
-    const types = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
-    const resultsEl = document.getElementById('results');
-    const btn = document.getElementById('checkBtn');
-    const domainInput = document.getElementById('domain');
+create_user_and_dirs() {
+  log "Создаю системного пользователя n8n и директории..."
+  id -u n8n >/dev/null 2>&1 || useradd --system --home "${N8N_DATA_DIR}" --shell /usr/sbin/nologin n8n
+  mkdir -p "${N8N_DATA_DIR}"/{data,postgres,traefik}
+  chown -R n8n:n8n "${N8N_DATA_DIR}"
+}
 
-    function card(title, innerHTML) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
-      wrapper.innerHTML = `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div><div class="text-sm text-slate-300 mono space-y-1">${innerHTML}</div>`;
-      return wrapper;
-    }
+gen_secret() {
+  openssl rand -base64 48 | tr -d '\n'
+}
 
-    async function fetchDoH(domain, type) {
-      const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
-      const r = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
-      if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
-      return r.json();
-    }
+write_env() {
+  log "Генерирую .env..."
+  local key
+  key=$(gen_secret)
+  cat > "${N8N_DATA_DIR}/.env" <<EOF
+# n8n
+N8N_BASIC_AUTH_ACTIVE=false
+N8N_PORT=5678
+N8N_ENCRYPTION_KEY=${key}
+# база
+POSTGRES_USER=n8n
+POSTGRES_PASSWORD=$(gen_secret | tr -d '=+/')
+POSTGRES_DB=n8n
+# домен/база_url
+EOF
 
-    function renderAnswers(json) {
-      if (!json || !json.Answer) return `<span class='text-slate-500'>нет записей</span>`;
-      return json.Answer.map(a => {
-        const name = a.name?.replace(/\.$/, '') || '';
-        const data = a.data || '';
-        const ttl = a.TTL;
-        return `<div><span class='text-white'>${name}</span> → <span>${data}</span> <span class='text-slate-500'>(TTL ${ttl})</span></div>`;
-      }).join('');
-    }
+  if [[ "${USE_TRAEFIK}" -eq 1 ]]; then
+    echo "N8N_HOST=${N8N_DOMAIN}" >> "${N8N_DATA_DIR}/.env"
+    echo "WEBHOOK_URL=https://${N8N_DOMAIN}" >> "${N8N_DATA_DIR}/.env"
+  else
+    echo "N8N_HOST=localhost" >> "${N8N_DATA_DIR}/.env"
+    echo "WEBHOOK_URL=http://localhost:5678" >> "${N8N_DATA_DIR}/.env"
+  fi
+  chown n8n:n8n "${N8N_DATA_DIR}/.env"
+}
 
-    async function check() {
-      const domain = domainInput.value.trim();
-      if (!domain) { domainInput.focus(); return; }
-      resultsEl.innerHTML = '';
-      btn.disabled = true; btn.textContent = 'Проверяю…';
+write_compose_no_proxy() {
+  cat > "${N8N_DATA_DIR}/docker-compose.yml" <<'YML'
+name: n8n
+services:
+  db:
+    image: postgres:${POSTGRES_VERSION}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+  n8n:
+    image: n8nio/n8n:${N8N_VERSION}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - N8N_EDITOR_BASE_URL=${WEBHOOK_URL}
+      - N8N_DIAGNOSTICS_ENABLED=false
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./data:/home/node/.n8n
+    depends_on:
+      - db
+YML
+}
 
-      for (const t of types) {
-        const holder = card(t, '<span class="text-slate-500">запрос…</span>');
-        resultsEl.appendChild(holder);
-        try {
-          const json = await fetchDoH(domain, t);
-          holder.querySelector('.mono').innerHTML = renderAnswers(json);
-        } catch (e) {
-          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
-        }
-      }
+write_compose_with_traefik() {
+  cat > "${N8N_DATA_DIR}/docker-compose.yml" <<'YML'
+name: n8n
+services:
+  traefik:
+    image: traefik:latest
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=websecure"
+      - "--certificatesresolvers.le.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--serversTransport.insecureSkipVerify=true"
+    ports:
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik:/letsencrypt"
+    labels:
+      - "traefik.enable=true"
 
-      btn.disabled = false; btn.textContent = 'Проверить';
-    }
+  db:
+    image: postgres:${POSTGRES_VERSION}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
 
-    btn.addEventListener('click', check);
-    domainInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') check(); });
-    // демо-домен
-    domainInput.value = 'example.com';
-    setTimeout(check, 200);
-  </script>
-</body>
-</html>
+  n8n:
+    image: n8nio/n8n:${N8N_VERSION}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - N8N_EDITOR_BASE_URL=https://${N8N_HOST}
+      - WEBHOOK_URL=https://${N8N_HOST}
+      - N8N_DIAGNOSTICS_ENABLED=false
+    volumes:
+      - ./data:/home/node/.n8n
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`${N8N_HOST}`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=le"
+YML
+}
+
+write_systemd() {
+  log "Создаю systemd unit..."
+  cat > /etc/systemd/system/n8n-compose.service <<EOF
+[Unit]
+Description=n8n via Docker Compose
+Requires=docker.service
+After=docker.service
+
+[Service]
+WorkingDirectory=${N8N_DATA_DIR}
+Environment="COMPOSE_PROJECT_NAME=n8n"
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=0
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable n8n-compose.service
+}
+
+print_summary() {
+  echo
+  log "Готово!"
+  if [[ "${USE_TRAEFIK}" -eq 1 ]]; then
+    echo "Открой: https://${N8N_DOMAIN}"
+  else
+    echo "Открой: http://<IP-сервера>:5678"
+  fi
+  echo "Директория: ${N8N_DATA_DIR}"
+  echo "Старт/стоп:  sudo systemctl start|stop n8n-compose"
+}
+
+main() {
+  require_root
+  check_ubuntu
+  install_docker
+  create_user_and_dirs
+  write_env
+  if [[ "${USE_TRAEFIK}" -eq 1 ]]; then
+    write_compose_with_traefik
+  else
+    write_compose_no_proxy
+  fi
+  chown -R n8n:n8n "${N8N_DATA_DIR}"
+  write_systemd
+  log "Запускаю сервис..."
+  systemctl start n8n-compose
+  print_summary
+}
+
+main "$@"
