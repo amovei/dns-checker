@@ -11,10 +11,6 @@
   <style>
     body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
-    /* фиксы кликов: правую колонку поднимаем над сеткой результатов */
-    aside#promo-col { position: relative; z-index: 50; isolation: isolate; }
-    /* у контейнера с результатами запрещаем перекрывать соседей */
-    #results { position: relative; z-index: 0; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
@@ -43,26 +39,14 @@
         <div class="grid md:grid-cols-2 gap-4" id="results"></div>
       </div>
 
-      <aside id="promo-col" class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
+      <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
         <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
-        <p class="text-slate-300 mb-4">
-          Разворачиваем n8n под домен с HTTPS за пару минут (1‑click installer). Настройка VPS, Traefik, мониторинг.
-          Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>
-          или Telegram: <a class="text-violet-400 hover:text-violet-300 underline" target="_blank" rel="noopener" href="https://t.me/gia_sah">@gia_sah</a>.
-        </p>
-        <ul class="list-disc pl-5 space-y-1 text-slate-300 mb-6">
+        <p class="text-slate-300 mb-4">Разворачиваем n8n под домен с HTTPS за пару минут (1‑click installer). Настройка VPS, Traefik, мониторинг. Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:you@mail.ru">you@mail.ru</a> или Telegram: <span class="mono">@your_handle</span>.</p>
+        <ul class="list-disc pl-5 space-y-1 text-slate-300">
           <li>Автоматические SSL‑сертификаты (Let’s Encrypt)</li>
           <li>Миграции/бэкапы PostgreSQL</li>
           <li>CI/CD для контейнеров</li>
         </ul>
-
-        <!-- Блок с гифкой -->
-        <div id="promo" class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 text-center">
-          <h4 class="text-lg font-semibold mb-3">🔥 Подключайся!</h4>
-          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="inline-block">
-            <img src="assets/Anim_v1.gif.gif" alt="Наш телеграм‑бот" class="rounded-xl shadow pointer-events-auto select-none max-w-full h-auto" />
-          </a>
-        </div>
       </aside>
     </section>
 
@@ -70,8 +54,7 @@
       <h4 class="text-lg font-semibold mb-2">Как это работает?</h4>
       <p class="text-slate-300">Фронтенд запрашивает DNS‑записи через DNS‑over‑HTTPS:
         <span class="mono">https://dns.google/resolve?name=&lt;домен&gt;&amp;type=A</span> или
-        <span class="mono">https://cloudflare-dns.com/dns-query?name=&lt;домен&gt;&amp;type=A</span> (формат <span class="mono">application/dns-json</span>).
-      </p>
+        <span class="mono">https://cloudflare-dns.com/dns-query?name=&lt;домен&gt;&amp;type=A</span> (формат <span class="mono">application/dns-json</span>).</p>
     </section>
   </main>
 
@@ -96,9 +79,10 @@
     }
 
     async function fetchDoH(domain, type) {
+      // Google DoH чаще всего надёжно отдаёт CORS
       const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
       const r = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
-      if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();
     }
 
@@ -108,7 +92,7 @@
         const name = a.name?.replace(/\.$/, '') || '';
         const data = a.data || '';
         const ttl = a.TTL;
-        return `<div><span class='text-white'>\${name}</span> → <span>\${data}</span> <span class='text-slate-500'>(TTL \${ttl})</span></div>`;
+        return `<div><span class='text-white'>${name}</span> → <span>${data}</span> <span class='text-slate-500'>(TTL ${ttl})</span></div>`;
       }).join('');
     }
 
@@ -125,7 +109,7 @@
           const json = await fetchDoH(domain, t);
           holder.querySelector('.mono').innerHTML = renderAnswers(t, json);
         } catch (e) {
-          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: \${e.message}</span>`;
+          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
         }
       }
 
@@ -134,7 +118,9 @@
 
     btn.addEventListener('click', check);
     domainInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') check(); });
+    // демо-домен, чтобы было что показать
     domainInput.value = 'example.com';
+    // автозапуск
     setTimeout(check, 200);
   </script>
 </body>
