@@ -11,13 +11,6 @@
   <style>
     body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
-    /* NEW: переносим очень длинные токены внутри карточек,
-       чтобы не вылезали за блок и не «наезжали» на правую колонку */
-    .dns-result{
-      word-break: break-word;      /* перенос по словам */
-      overflow-wrap: anywhere;     /* если нет пробелов — ломаем где угодно */
-      white-space: pre-wrap;       /* сохраняем пробелы/переводы строк, но можно переносить */
-    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
@@ -40,9 +33,8 @@
         <h2 class="text-2xl font-bold mb-4">Проверка DNS-записей</h2>
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
           <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com" />
-          <button id="checkBtn" type="button" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
+          <button id="checkBtn" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
         </div>
-        <p class="text-sm text-slate-400 mb-4">Запрос идёт через публичные DNS-over-HTTPS API (Google/Cloudflare). Бэкенд не требуется.</p>
 
         <div class="grid md:grid-cols-2 gap-4" id="results"></div>
       </div>
@@ -76,24 +68,9 @@
         </div>
       </div>
     </section>
-
-    <section class="mt-10 p-6 rounded-2xl bg-slate-900/60 border border-slate-800">
-      <h4 class="text-lg font-semibold mb-2">Как это работает?</h4>
-      <p class="text-slate-300">Фронтенд запрашивает DNS-записи через DNS-over-HTTPS:
-        <span class="mono">https://dns.google/resolve?name=&lt;домен&gt;&amp;type=A</span> или
-        <span class="mono">https://cloudflare-dns.com/dns-query?name=&lt;домен&gt;&amp;type=A</span> (формат <span class="mono">application/dns-json</span>).</p>
-    </section>
   </main>
 
-  <footer class="max-w-6xl mx-auto px-4 py-10 text-center text-slate-400">
-    Сделано для быстрых проверок DNS • © <span id="year"></span>
-  </footer>
-
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const yearEl = document.getElementById('year');
-    if (yearEl) yearEl.textContent = new Date().getFullYear();
-
     const types = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
     const resultsEl = document.getElementById('results');
     const btn = document.getElementById('checkBtn');
@@ -102,68 +79,51 @@
     function card(title, innerHTML) {
       const wrapper = document.createElement('div');
       wrapper.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
-      /* NEW: dns-result добавлен для переноса длинных строк */
-      wrapper.innerHTML =
-        `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
-        `<div class="text-sm text-slate-300 mono space-y-1 dns-result">${innerHTML}</div>`;
+      wrapper.innerHTML = `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div><div class="text-sm text-slate-300 mono space-y-1">${innerHTML}</div>`;
       return wrapper;
     }
 
-    // Google DoH с fallback на Cloudflare DoH
     async function fetchDoH(domain, type) {
-      const gUrl = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
-      const cfUrl = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
-      try {
-        const r = await fetch(gUrl, { mode: 'cors', headers: { 'accept': 'application/dns-json' } });
-        if (!r.ok) throw new Error(`Google HTTP ${r.status}`);
-        return await r.json();
-      } catch (e) {
-        console.warn('Google DoH failed:', e);
-        const r2 = await fetch(cfUrl, { mode: 'cors', headers: { 'accept': 'application/dns-json' } });
-        if (!r2.ok) throw new Error(`Cloudflare HTTP ${r2.status}`);
-        return await r2.json();
-      }
+      const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`;
+      const r = await fetch(url, { headers: { 'accept': 'application/dns-json' } });
+      if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
+      return r.json();
     }
 
     function renderAnswers(type, json) {
       if (!json || !json.Answer) return `<span class='text-slate-500'>нет записей</span>`;
       return json.Answer.map(a => {
-        const name = (a.name || '').replace(/\.$/, '');
+        const name = a.name?.replace(/\.$/, '') || '';
         const data = a.data || '';
-        const ttl = a.TTL ?? '';
-        return `<div><span class='text-white'>${name}</span> → <span>${data}</span> <span class='text-slate-500'>${ttl ? `(TTL ${ttl})` : ''}</span></div>`;
+        const ttl = a.TTL;
+        return `<div><span class='text-white'>${name}</span> → <span>${data}</span> <span class='text-slate-500'>(TTL ${ttl})</span></div>`;
       }).join('');
     }
 
     async function check() {
-      const domain = (domainInput?.value || '').trim();
-      if (!domain) { domainInput?.focus(); return; }
-      if (!resultsEl) return;
-
+      const domain = domainInput.value.trim();
+      if (!domain) { domainInput.focus(); return; }
       resultsEl.innerHTML = '';
-      if (btn) { btn.disabled = true; btn.textContent = 'Проверяю…'; }
+      btn.disabled = true; btn.textContent = 'Проверяю…';
 
       for (const t of types) {
         const holder = card(t, '<span class="text-slate-500">запрос…</span>');
         resultsEl.appendChild(holder);
         try {
           const json = await fetchDoH(domain, t);
-          holder.querySelector('.dns-result').innerHTML = renderAnswers(t, json); /* NEW: target dns-result */
+          holder.querySelector('.mono').innerHTML = renderAnswers(t, json);
         } catch (e) {
-          console.error('DoH error:', e);
-          holder.querySelector('.dns-result').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
+          holder.querySelector('.mono').innerHTML = `<span class='text-rose-400'>ошибка: ${e.message}</span>`;
         }
       }
 
-      if (btn) { btn.disabled = false; btn.textContent = 'Проверить'; }
+      btn.disabled = false; btn.textContent = 'Проверить';
     }
 
-    if (btn) btn.addEventListener('click', check);
-    if (domainInput) domainInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') check(); });
-
-    if (domainInput && !domainInput.value) domainInput.value = 'example.com';
-    setTimeout(() => { check().catch(console.error); }, 200);
-  });
+    btn.addEventListener('click', check);
+    domainInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') check(); });
+    domainInput.value = 'example.com';
+    setTimeout(check, 200);
   </script>
 </body>
 </html>
