@@ -1,102 +1,155 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #0d1224;
-  color: white;
-  margin: 0;
-  padding: 0;
-}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS Checker</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #0f172a;
+      color: #e2e8f0;
+    }
+    header {
+      padding: 1rem;
+      text-align: center;
+      background: #1e293b;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .card h3 {
+      margin-top: 0;
+      color: #fff;
+    }
+    input[type="text"] {
+      width: 70%;
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: none;
+      margin-right: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 5px;
+      background: #8b5cf6;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #7c3aed;
+    }
+    .results {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .result-box {
+      background: #0f172a;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      min-height: 80px;
+    }
+    .ad-block {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .ad-block img {
+      width: 100%;
+      max-width: 250px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .ad-block img:hover {
+      transform: scale(1.05);
+    }
+    footer {
+      text-align: center;
+      padding: 1rem;
+      margin-top: 2rem;
+      background: #1e293b;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    DNS Checker
+  </header>
 
-header {
-  text-align: center;
-  padding: 20px;
-  font-size: 1.5em;
-  font-weight: bold;
-}
+  <div class="container">
+    <!-- Основная часть -->
+    <div class="card">
+      <h3>Проверка DNS-записей</h3>
+      <input type="text" id="domain" placeholder="example.com">
+      <button onclick="checkDNS()">Проверить</button>
 
-.container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 20px;
-  padding: 20px;
-}
+      <div class="results">
+        <div class="result-box" id="a">A</div>
+        <div class="result-box" id="aaaa">AAAA</div>
+        <div class="result-box" id="cname">CNAME</div>
+        <div class="result-box" id="mx">MX</div>
+        <div class="result-box" id="ns">NS</div>
+        <div class="result-box" id="txt">TXT</div>
+        <div class="result-box" id="soa">SOA</div>
+      </div>
+    </div>
 
-.card {
-  background: #1c2340;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  width: 350px;
-}
+    <!-- Рекламный блок -->
+    <div class="card">
+      <h3>🔥 Подключайся!</h3>
+      <div class="ad-block">
+        <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank">
+          <img src="assets/Anim_v1.gif" alt="Telegram Bot">
+        </a>
+      </div>
+    </div>
+  </div>
 
-.input-group {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
+  <footer>
+    Сделано для быстрой проверки DNS • © 2025
+  </footer>
 
-.input-group input {
-  flex: 1;
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-}
+  <script>
+    async function checkDNS() {
+      const domain = document.getElementById("domain").value.trim();
+      if (!domain) return alert("Введите домен!");
 
-.input-group button {
-  background: #9b59b6;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.input-group button:hover {
-  background: #8e44ad;
-}
-
-.results {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.result-card {
-  background: #2a3053;
-  padding: 10px;
-  border-radius: 8px;
-  min-height: 50px;
-}
-
-/* --- Гифка --- */
-.promo-gif {
-  width: 100%;
-  border-radius: 12px;
-  margin-bottom: 15px;
-}
-
-/* --- Кнопка --- */
-.btn-telegram {
-  display: inline-block;
-  background: linear-gradient(90deg, #6C63FF, #8A2BE2);
-  color: white;
-  text-decoration: none;
-  padding: 12px 18px;
-  border-radius: 10px;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.btn-telegram:hover {
-  background: linear-gradient(90deg, #8A2BE2, #6C63FF);
-  transform: scale(1.05);
-}
-
-footer {
-  text-align: center;
-  padding: 15px;
-  margin-top: 30px;
-  font-size: 0.9em;
-  color: #aaa;
-}
+      const types = ["A","AAAA","CNAME","MX","NS","TXT","SOA"];
+      for (let type of types) {
+        document.getElementById(type.toLowerCase()).innerText = type + ": проверка...";
+        try {
+          const res = await fetch(`https://dns.google/resolve?name=${domain}&type=${type}`);
+          const data = await res.json();
+          if (data.Answer) {
+            document.getElementById(type.toLowerCase()).innerText =
+              type + "\\n" + data.Answer.map(a => a.data).join("\\n");
+          } else {
+            document.getElementById(type.toLowerCase()).innerText = type + "\\nнет записей";
+          }
+        } catch (e) {
+          document.getElementById(type.toLowerCase()).innerText = type + "\\nошибка";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
