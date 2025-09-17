@@ -22,7 +22,7 @@
 
   <main class="max-w-6xl mx-auto px-4 py-10 grid md:grid-cols-3 gap-6">
     <!-- Левая часть -->
-    <div class="md:col-span-2 space-y-4">
+    <div class="md:col-span-2 space-y-4 relative z-0">
       <div class="bg-slate-900 p-6 rounded-2xl shadow">
         <h2 class="text-lg font-semibold mb-2">Проверка DNS-записей</h2>
         <div class="flex space-x-2 mb-4">
@@ -32,17 +32,17 @@
         <p class="text-sm text-slate-400">Запрос идёт через публичные DNS-over-HTTPS API (Google/Cloudflare). Бэкенд не требуется.</p>
       </div>
 
-      <div id="results" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+      <div id="results" class="grid grid-cols-2 md:grid-cols-3 gap-4 relative z-0 pointer-events-auto"></div>
     </div>
 
     <!-- Правая часть -->
-    <aside class="space-y-6">
+    <aside class="space-y-6 isolate relative z-50">
       <div class="bg-slate-900 p-6 rounded-2xl shadow">
         <h2 class="text-lg font-semibold mb-2">Нужна помощь с инфраструктурой?</h2>
         <p class="text-sm text-slate-300 mb-2">
           Разворачиваем n8n под домен с HTTPS за пару минут (1‑click installer). Настройка VPS, Traefik, мониторинг. <br/>
           Пишите: <a href="mailto:amovei15@gmail.com" class="text-purple-400 hover:underline">amovei15@gmail.com</a> или Telegram: 
-          <a href="https://t.me/gia_sah" target="_blank" class="text-purple-400 hover:underline">@gia_sah</a>.
+          <a href="https://t.me/gia_sah" target="_blank" class="text-purple-400 hover:underline" rel="noopener">@@gia_sah</a>.
         </p>
         <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
           <li>Автоматические SSL‑сертификаты (Let’s Encrypt)</li>
@@ -53,8 +53,8 @@
 
       <div class="bg-slate-900 p-4 rounded-2xl shadow text-center">
         <h2 class="text-lg font-semibold mb-3">🔥 Подключайся!</h2>
-        <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank">
-          <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow mx-auto" />
+        <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="relative z-50 block">
+          <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow mx-auto pointer-events-auto" />
         </a>
       </div>
     </aside>
