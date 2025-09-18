@@ -33,7 +33,7 @@
         <h2 class="text-2xl font-bold mb-4">Проверка DNS-записей</h2>
 
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
-          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com или https://example.com/..." />
+          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com" />
           <button id="checkBtn" type="button" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
         </div>
 
@@ -42,9 +42,9 @@
 
       <!-- Правая колонка -->
       <div class="flex flex-col gap-6">
-        <!-- Услуги / n8n -->
+        <!-- Блок услуг / n8n -->
         <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
-          <h3 class="text-xl font-bold mb-3">Автоматизация на n8n для бизнеса</h3>
+          <h3 class="text-xl font-bold mb-2">Автоматизация на n8n для бизнеса</h3>
           <p class="text-slate-300 mb-4">
             Помогаем проектам ускоряться за счёт n8n: строим интеграции, сценарии и пайплайны данных.
             Настраиваем VPS, Traefik, HTTPS, мониторинг и резервное копирование.
@@ -52,17 +52,17 @@
             Telegram: <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
           </p>
           <ul class="list-disc pl-5 space-y-1 text-slate-300">
-            <li>Развёртывание n8n под домен с HTTPS (Let's Encrypt)</li>
+            <li>Развёртывание n8n под домен с HTTPS (Let’s Encrypt)</li>
             <li>Интеграции с CRM, Telegram/WhatsApp, Google Sheets, API</li>
             <li>Вебхуки, боты, парсинг/ETL, триггеры и расписания</li>
             <li>Логи, алерты, бэкапы и обновления без простоя</li>
           </ul>
         </aside>
 
-        <!-- Промо-картинка (без заголовка) -->
-        <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40 relative">
-          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block relative z-10" aria-label="Открыть Telegram-бота">
-            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full pointer-events-auto">
+        <!-- Только GIF без заголовка -->
+        <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
+          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block">
+            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
           </a>
         </div>
       </div>
@@ -70,56 +70,43 @@
   </main>
 
   <script>
-  (function init() {
+  document.addEventListener('DOMContentLoaded', () => {
     const types   = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
     const results = document.getElementById('results');
     const btn     = document.getElementById('checkBtn');
     const input   = document.getElementById('domain');
-
-    // Нормализуем ввод: вытаскиваем hostname из любой вставленной ссылки/строки
-    function normalizeDomain(value) {
-      let v = (value || '').trim();
-      if (!v) return '';
-      // если оставили trailing dot — убираем
-      v = v.replace(/\s+/g, '');
-      // пробуем как URL
-      try {
-        // если без схемы — добавим временно, чтобы URL распознался
-        const tmp = v.match(/^https?:\/\//i) ? v : 'http://' + v;
-        const url = new URL(tmp);
-        return (url.hostname || '').replace(/\.$/, '');
-      } catch(_) {
-        // fallback: вытащим "слово.слово" из строки
-        const m = v.match(/([a-z0-9-]+\.)+[a-z]{2,}/i);
-        return m ? m[0].replace(/\.$/, '') : '';
-      }
-    }
 
     function card(title, innerHTML) {
       const el = document.createElement('div');
       el.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
       el.innerHTML =
         `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
-        `<div class="text-sm text-slate-300 mono space-y-1 break-words whitespace-pre-wrap">${innerHTML}</div>`;
+        `<div class="text-sm text-slate-300 mono space-y-1 break-words whitespace-pre-wrap overflow-x-auto">${innerHTML}</div>`;
       return el;
     }
 
-    // Запрос к DoH-провайдерам (Google → Cloudflare)
+    // Аккуратный DoH-failover: Google → Cloudflare(1) → Cloudflare(2)
     async function fetchDoH(domain, type) {
+      // Для CF добавляем ct=application/dns-json в URL — работает даже при срезанном Accept.
       const endpoints = [
         `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`,
-        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`
+        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}&ct=application/dns-json`,
+        `https://resolver.cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}&ct=application/dns-json`,
       ];
       let lastErr;
       for (const url of endpoints) {
         try {
           const r = await fetch(url, {
             mode: 'cors',
+            redirect: 'follow',
+            referrerPolicy: 'no-referrer',
             headers: { 'accept': 'application/dns-json' }
           });
-          if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return await r.json();
-        } catch (e) { lastErr = e; }
+        } catch (e) {
+          lastErr = e;
+        }
       }
       throw lastErr || new Error('Нет ответа от DoH');
     }
@@ -130,17 +117,13 @@
         const name = (a.name || '').replace(/\.$/, '');
         const data = a.data || '';
         const ttl  = a.TTL ?? '';
-        return `<div class="break-words whitespace-pre-wrap"><span class="text-white">${name}</span> → <span>${data}</span> <span class="text-slate-500">(TTL ${ttl})</span></div>`;
+        return `<div><span class="text-white">${name}</span> → <span>${data}</span> <span class="text-slate-500">(TTL ${ttl})</span></div>`;
       }).join('');
     }
 
     async function check() {
-      const domain = normalizeDomain(input.value);
-      if (!domain) {
-        input.focus();
-        input.select?.();
-        return;
-      }
+      const domain = (input.value || '').trim();
+      if (!domain) { input.focus(); return; }
 
       results.innerHTML = '';
       btn.disabled = true; btn.textContent = 'Проверяю…';
@@ -165,7 +148,7 @@
     // демо
     input.value = 'example.com';
     setTimeout(check, 200);
-  })();
+  });
   </script>
 </body>
 </html>
