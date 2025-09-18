@@ -33,7 +33,7 @@
         <h2 class="text-2xl font-bold mb-4">Проверка DNS-записей</h2>
 
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
-          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com" />
+          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com или https://example.com/..." />
           <button id="checkBtn" type="button" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
         </div>
 
@@ -60,9 +60,9 @@
         </aside>
 
         <!-- Промо-картинка (без заголовка) -->
-        <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
-          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block" aria-label="Открыть Telegram-бота">
-            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
+        <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40 relative">
+          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block relative z-10" aria-label="Открыть Telegram-бота">
+            <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full pointer-events-auto">
           </a>
         </div>
       </div>
@@ -70,11 +70,30 @@
   </main>
 
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
+  (function init() {
     const types   = ['A','AAAA','CNAME','MX','NS','TXT','SOA'];
     const results = document.getElementById('results');
     const btn     = document.getElementById('checkBtn');
     const input   = document.getElementById('domain');
+
+    // Нормализуем ввод: вытаскиваем hostname из любой вставленной ссылки/строки
+    function normalizeDomain(value) {
+      let v = (value || '').trim();
+      if (!v) return '';
+      // если оставили trailing dot — убираем
+      v = v.replace(/\s+/g, '');
+      // пробуем как URL
+      try {
+        // если без схемы — добавим временно, чтобы URL распознался
+        const tmp = v.match(/^https?:\/\//i) ? v : 'http://' + v;
+        const url = new URL(tmp);
+        return (url.hostname || '').replace(/\.$/, '');
+      } catch(_) {
+        // fallback: вытащим "слово.слово" из строки
+        const m = v.match(/([a-z0-9-]+\.)+[a-z]{2,}/i);
+        return m ? m[0].replace(/\.$/, '') : '';
+      }
+    }
 
     function card(title, innerHTML) {
       const el = document.createElement('div');
@@ -116,8 +135,12 @@
     }
 
     async function check() {
-      const domain = (input.value || '').trim();
-      if (!domain) { input.focus(); return; }
+      const domain = normalizeDomain(input.value);
+      if (!domain) {
+        input.focus();
+        input.select?.();
+        return;
+      }
 
       results.innerHTML = '';
       btn.disabled = true; btn.textContent = 'Проверяю…';
@@ -142,7 +165,7 @@
     // демо
     input.value = 'example.com';
     setTimeout(check, 200);
-  });
+  })();
   </script>
 </body>
 </html>
