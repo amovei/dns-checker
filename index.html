@@ -42,25 +42,26 @@
 
       <!-- Правая колонка -->
       <div class="flex flex-col gap-6">
-        <!-- Блок помощи -->
+        <!-- Услуги / n8n -->
         <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
-          <h3 class="text-xl font-bold mb-2">Нужна помощь с инфраструктурой?</h3>
+          <h3 class="text-xl font-bold mb-3">Автоматизация на n8n для бизнеса</h3>
           <p class="text-slate-300 mb-4">
-            Разворачиваем n8n под домен с HTTPS за пару минут (1-click installer). Настройка VPS, Traefik, мониторинг.
-            Пишите: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>
-            или Telegram: <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
+            Помогаем проектам ускоряться за счёт n8n: строим интеграции, сценарии и пайплайны данных.
+            Настраиваем VPS, Traefik, HTTPS, мониторинг и резервное копирование.
+            Связаться: <a class="text-violet-400 hover:text-violet-300 underline" href="mailto:amovei15@gmail.com">amovei15@gmail.com</a>,
+            Telegram: <a class="text-violet-400 hover:text-violet-300 underline" href="https://t.me/gia_sah" target="_blank" rel="noopener">@gia_sah</a>.
           </p>
           <ul class="list-disc pl-5 space-y-1 text-slate-300">
-            <li>Автоматические SSL-сертификаты (Let’s Encrypt)</li>
-            <li>Миграции/бэкапы PostgreSQL</li>
-            <li>CI/CD для контейнеров</li>
+            <li>Развёртывание n8n под домен с HTTPS (Let's Encrypt)</li>
+            <li>Интеграции с CRM, Telegram/WhatsApp, Google Sheets, API</li>
+            <li>Вебхуки, боты, парсинг/ETL, триггеры и расписания</li>
+            <li>Логи, алерты, бэкапы и обновления без простоя</li>
           </ul>
         </aside>
 
-        <!-- Промо-графика -->
-        <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
-          <h3 class="text-xl font-bold mb-3">🔥 Подключайся!</h3>
-          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block">
+        <!-- Промо-картинка (без заголовка) -->
+        <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
+          <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block" aria-label="Открыть Telegram-бота">
             <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
           </a>
         </div>
@@ -80,11 +81,11 @@
       el.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
       el.innerHTML =
         `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
-        `<div class="text-sm text-slate-300 mono space-y-1">${innerHTML}</div>`;
+        `<div class="text-sm text-slate-300 mono space-y-1 break-words whitespace-pre-wrap">${innerHTML}</div>`;
       return el;
     }
 
-    // Запрос к провайдерам DoH (Google → Cloudflare)
+    // Запрос к DoH-провайдерам (Google → Cloudflare)
     async function fetchDoH(domain, type) {
       const endpoints = [
         `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`,
@@ -97,11 +98,9 @@
             mode: 'cors',
             headers: { 'accept': 'application/dns-json' }
           });
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
           return await r.json();
-        } catch (e) {
-          lastErr = e;
-        }
+        } catch (e) { lastErr = e; }
       }
       throw lastErr || new Error('Нет ответа от DoH');
     }
@@ -112,7 +111,7 @@
         const name = (a.name || '').replace(/\.$/, '');
         const data = a.data || '';
         const ttl  = a.TTL ?? '';
-        return `<div><span class="text-white">${name}</span> → <span>${data}</span> <span class="text-slate-500">(TTL ${ttl})</span></div>`;
+        return `<div class="break-words whitespace-pre-wrap"><span class="text-white">${name}</span> → <span>${data}</span> <span class="text-slate-500">(TTL ${ttl})</span></div>`;
       }).join('');
     }
 
