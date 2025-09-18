@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DNS Checker — быстрые DNS-проверки</title>
+  <title>chekdns.click — быстрые DNS-проверки</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,11 +14,12 @@
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100">
+  <!-- Header -->
   <header class="sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70 border-b border-slate-800">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500"></div>
-        <h1 class="text-lg font-semibold tracking-tight">DNS Checker</h1>
+        <h1 class="text-lg font-semibold tracking-tight">chekdns.click</h1>
       </div>
       <nav class="text-sm text-slate-300">
         <a href="#promo" class="hover:text-white">Услуги</a>
@@ -33,7 +34,7 @@
         <h2 class="text-2xl font-bold mb-4">Проверка DNS-записей</h2>
 
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
-          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com" />
+          <input id="domain" class="flex-1 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mono" placeholder="example.com или https://example.com/path" />
           <button id="checkBtn" type="button" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 active:bg-violet-700 font-semibold">Проверить</button>
         </div>
 
@@ -42,7 +43,7 @@
 
       <!-- Правая колонка -->
       <div class="flex flex-col gap-6">
-        <!-- Блок услуг / n8n -->
+        <!-- Блок про n8n -->
         <aside class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40" id="promo">
           <h3 class="text-xl font-bold mb-2">Автоматизация на n8n для бизнеса</h3>
           <p class="text-slate-300 mb-4">
@@ -59,7 +60,7 @@
           </ul>
         </aside>
 
-        <!-- Только GIF без заголовка -->
+        <!-- Промо-графика: только кликабельная гиф -->
         <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl shadow-black/40">
           <a href="https://t.me/tgbpn_bot?start=utm_dnschek" target="_blank" rel="noopener" class="block">
             <img src="assets/Anim_v1.gif.gif" alt="Telegram Bot" class="rounded-xl shadow-lg hover:scale-105 transition-transform duration-300 w-full">
@@ -76,37 +77,51 @@
     const btn     = document.getElementById('checkBtn');
     const input   = document.getElementById('domain');
 
+    // Нормализация значения: принимает и домен, и полный URL.
+    function normalizeDomain(value) {
+      let v = (value || '').trim().toLowerCase();
+
+      // Уже похож на домен (без схемы/слэшей)
+      if (/^[a-z0-9.-]+\.?[a-z]{2,}$/i.test(v) && !v.includes('/') && !v.includes('://')) {
+        v = v.replace(/\.$/, '');
+        if (v.startsWith('www.')) v = v.slice(4);
+        return v;
+      }
+
+      // Пробуем распарсить как URL
+      try {
+        if (!/^[a-z]+:\/\//i.test(v)) v = 'http://' + v;
+        const url = new URL(v);
+        let host = url.hostname.replace(/\.$/, '');
+        if (host.startsWith('www.')) host = host.slice(4);
+        return host;
+      } catch {
+        return '';
+      }
+    }
+
     function card(title, innerHTML) {
       const el = document.createElement('div');
       el.className = 'rounded-xl border border-slate-800 bg-slate-900/50 p-4';
       el.innerHTML =
         `<div class="flex items-center justify-between mb-2"><h3 class="font-semibold">${title}</h3></div>` +
-        `<div class="text-sm text-slate-300 mono space-y-1 break-words whitespace-pre-wrap overflow-x-auto">${innerHTML}</div>`;
+        `<div class="text-sm text-slate-300 mono space-y-1 break-words break-all">${innerHTML}</div>`;
       return el;
     }
 
-    // Аккуратный DoH-failover: Google → Cloudflare(1) → Cloudflare(2)
+    // DoH-запрос (Google → Cloudflare fallback)
     async function fetchDoH(domain, type) {
-      // Для CF добавляем ct=application/dns-json в URL — работает даже при срезанном Accept.
       const endpoints = [
         `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`,
-        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}&ct=application/dns-json`,
-        `https://resolver.cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}&ct=application/dns-json`,
+        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`
       ];
       let lastErr;
       for (const url of endpoints) {
         try {
-          const r = await fetch(url, {
-            mode: 'cors',
-            redirect: 'follow',
-            referrerPolicy: 'no-referrer',
-            headers: { 'accept': 'application/dns-json' }
-          });
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const r = await fetch(url, { mode: 'cors', headers: { 'accept': 'application/dns-json' } });
+          if (!r.ok) throw new Error(\`HTTP \${r.status}\`);
           return await r.json();
-        } catch (e) {
-          lastErr = e;
-        }
+        } catch (e) { lastErr = e; }
       }
       throw lastErr || new Error('Нет ответа от DoH');
     }
@@ -122,8 +137,8 @@
     }
 
     async function check() {
-      const domain = (input.value || '').trim();
-      if (!domain) { input.focus(); return; }
+      const domain = normalizeDomain(input.value);
+      if (!domain) { input.focus(); input.select(); return; }
 
       results.innerHTML = '';
       btn.disabled = true; btn.textContent = 'Проверяю…';
@@ -146,7 +161,7 @@
     input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
 
     // демо
-    input.value = 'example.com';
+    input.value = 'https://example.com/';
     setTimeout(check, 200);
   });
   </script>
